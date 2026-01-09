@@ -1,0 +1,21 @@
+{
+  "id": "block-utilization",
+  "name": "Block Utilization",
+  "description": "OR block utilization metrics and analysis",
+  "availableTools": [
+    "block_util_summary",
+    "block_util_by_block_group",
+    "block_util_by_surgeon",
+    "block_util_drill_down"
+  ],
+  "outOfScope": [
+    "Questions about turnover times",
+    "Questions about cancellations",
+    "Questions about case durations outside of blocks"
+  ],
+  "suggestedQuestions": [
+    "What's our overall block utilization?",
+    "Which surgeons have the lowest utilization?",
+    "Show me utilization by service line"
+  ]
+}

@@ -14,8 +14,16 @@ const MODEL_ID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0";
 export interface AgentLoopOptions {
   maxIterations?: number;
   region?: string;
+  dashboardId?: string;
   onToolCall?: (name: string, params: unknown, result: unknown) => void;
   onResponse?: (response: string) => void;
+}
+
+export interface AgentLoopResult {
+  response: string;
+  history: Message[];
+  dashboard?: string;
+  availableTools: string[];
 }
 
 function convertToBedrockToolConfig(tools: MCPTool[]): ToolConfiguration {
@@ -72,16 +80,19 @@ export async function runAgentLoop(
   userMessage: string,
   conversationHistory: Message[] = [],
   options: AgentLoopOptions = {}
-): Promise<{ response: string; history: Message[] }> {
-  const { maxIterations = 10, region = "us-east-1", onToolCall, onResponse } = options;
+): Promise<AgentLoopResult> {
+  const { maxIterations = 10, region = "us-east-1", dashboardId, onToolCall, onResponse } = options;
 
   const bedrockClient = new BedrockRuntimeClient({ region });
   const mcpClient = getMCPClient();
 
-  // Get tool definitions from MCP server
-  const mcpTools = await mcpClient.listTools();
+  // Get tool definitions from MCP server (filtered by dashboard if provided)
+  const mcpTools = dashboardId
+    ? await mcpClient.listToolsForDashboard(dashboardId)
+    : await mcpClient.listTools();
   const toolConfig = convertToBedrockToolConfig(mcpTools);
   const systemPrompt = buildSystemPrompt();
+  const availableToolNames = mcpTools.map((t) => t.name);
 
   // Add the user message to history
   const messages: Message[] = [
@@ -125,7 +136,12 @@ export async function runAgentLoop(
       if (onResponse) {
         onResponse(finalText);
       }
-      return { response: finalText, history: messages };
+      return {
+        response: finalText,
+        history: messages,
+        dashboard: dashboardId,
+        availableTools: availableToolNames,
+      };
     }
 
     // If the model wants to use tools

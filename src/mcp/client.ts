@@ -2,6 +2,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { ChildProcess, spawn } from "child_process";
 import path from "path";
+import { getDashboardManifest } from "../config/dashboards";
 
 export interface MCPTool {
   name: string;
@@ -92,6 +93,19 @@ export class MCPClient {
 
   isConnected(): boolean {
     return this.connected;
+  }
+
+  async listToolsForDashboard(dashboardId: string): Promise<MCPTool[]> {
+    const allTools = await this.listTools();
+    const manifest = getDashboardManifest(dashboardId);
+
+    if (!manifest) {
+      console.warn(`[MCP Client] Dashboard "${dashboardId}" not found, returning all tools`);
+      return allTools;
+    }
+
+    const allowedTools = new Set(manifest.availableTools);
+    return allTools.filter((tool) => allowedTools.has(tool.name));
   }
 }
 

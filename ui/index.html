@@ -40,6 +40,45 @@
       color: #8b949e;
     }
 
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .dashboard-selector {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dashboard-selector label {
+      font-size: 13px;
+      color: #8b949e;
+    }
+
+    .dashboard-selector select {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 6px 12px;
+      color: #c9d1d9;
+      font-size: 13px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .dashboard-selector select:focus {
+      border-color: #58a6ff;
+    }
+
     .logo {
       width: 32px;
       height: 32px;
@@ -280,10 +319,20 @@
 </head>
 <body>
   <header>
-    <div class="logo">L</div>
-    <div>
-      <h1>Lumen</h1>
-      <div class="subtitle">Block Utilization Assistant</div>
+    <div class="header-left">
+      <div class="logo">L</div>
+      <div>
+        <h1>Lumen</h1>
+        <div class="subtitle" id="dashboardSubtitle">Block Utilization Assistant</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="dashboard-selector">
+        <label for="dashboardSelect">Dashboard:</label>
+        <select id="dashboardSelect">
+          <option value="block-utilization" selected>Block Utilization</option>
+        </select>
+      </div>
     </div>
   </header>
 
@@ -293,8 +342,8 @@
       <p>Ask me anything about OR block utilization metrics</p>
       <div class="suggestions">
         <div class="suggestion" onclick="sendSuggestion(this)">What's our overall block utilization?</div>
-        <div class="suggestion" onclick="sendSuggestion(this)">Which service lines have low utilization?</div>
-        <div class="suggestion" onclick="sendSuggestion(this)">Show me surgeon-level metrics</div>
+        <div class="suggestion" onclick="sendSuggestion(this)">Which surgeons have the lowest utilization?</div>
+        <div class="suggestion" onclick="sendSuggestion(this)">Show me utilization by service line</div>
       </div>
     </div>
   </div>
@@ -319,7 +368,15 @@
     const chatContainer = document.getElementById('chatContainer');
     const messageInput = document.getElementById('messageInput');
     const sendButton = document.getElementById('sendButton');
+    const dashboardSelect = document.getElementById('dashboardSelect');
+    const dashboardSubtitle = document.getElementById('dashboardSubtitle');
     let isWaiting = false;
+
+    // Update subtitle when dashboard changes
+    dashboardSelect.addEventListener('change', () => {
+      const selected = dashboardSelect.options[dashboardSelect.selectedIndex];
+      dashboardSubtitle.textContent = selected.text + ' Assistant';
+    });
 
     messageInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -362,7 +419,7 @@
 
           const header = document.createElement('div');
           header.className = 'tool-calls-header';
-          header.innerHTML = `<span class="arrow">▶</span> ${toolCalls.length} tool call${toolCalls.length > 1 ? 's' : ''} made`;
+          header.innerHTML = `<span class="arrow">&#9654;</span> ${toolCalls.length} tool call${toolCalls.length > 1 ? 's' : ''} made`;
           header.onclick = () => {
             header.classList.toggle('expanded');
             list.classList.toggle('expanded');
@@ -411,13 +468,15 @@
       addMessage(message, 'user');
       addMessage('', 'thinking');
 
+      const dashboard = dashboardSelect.value;
+
       try {
         const response = await fetch(API_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ message }),
+          body: JSON.stringify({ message, dashboard }),
         });
 
         removeThinking();
@@ -428,6 +487,11 @@
 
         const data = await response.json();
         addMessage(data.response, 'assistant', data.toolCalls);
+
+        // Log dashboard info for debugging
+        if (data.dashboard) {
+          console.log(`Dashboard: ${data.dashboard}, Available tools: ${data.availableTools?.join(', ')}`);
+        }
 
       } catch (error) {
         removeThinking();

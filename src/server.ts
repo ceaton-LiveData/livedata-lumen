@@ -20,6 +20,7 @@ app.use((_req, res, next) => {
 
 interface ChatRequest {
   message: string;
+  dashboard?: string;
 }
 
 interface ToolCallLog {
@@ -29,7 +30,7 @@ interface ToolCallLog {
 }
 
 app.post("/chat", async (req: Request, res: Response) => {
-  const { message } = req.body as ChatRequest;
+  const { message, dashboard } = req.body as ChatRequest;
 
   if (!message || typeof message !== "string") {
     res.status(400).json({ error: "Missing or invalid 'message' field" });
@@ -39,13 +40,19 @@ app.post("/chat", async (req: Request, res: Response) => {
   const toolCalls: ToolCallLog[] = [];
 
   try {
-    const { response } = await runAgentLoop(message, [], {
+    const result = await runAgentLoop(message, [], {
+      dashboardId: dashboard,
       onToolCall: (name, params, result) => {
         toolCalls.push({ name, params, result });
       },
     });
 
-    res.json({ response, toolCalls });
+    res.json({
+      response: result.response,
+      toolCalls,
+      dashboard: result.dashboard,
+      availableTools: result.availableTools,
+    });
   } catch (error) {
     console.error("[Server] Error in agent loop:", error);
     res.status(500).json({
