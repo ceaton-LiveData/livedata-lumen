@@ -1,0 +1,27 @@
+{
+  "name": "livedata_lumen",
+  "version": "1.0.0",
+  "description": "Chat agent using AWS Bedrock",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "ts-node src/test.ts",
+    "test:tools": "ts-node src/test-tools.ts",
+    "test:agent": "ts-node src/test-agent-loop.ts",
+    "build": "tsc",
+    "start": "ts-node src/server.ts",
+    "start:prod": "node dist/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.965.0",
+    "@types/node": "^25.0.3",
+    "express": "^5.2.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6"
+  }
+}
