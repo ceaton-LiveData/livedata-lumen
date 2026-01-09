@@ -1,10 +1,7 @@
 import express, { Request, Response } from "express";
 import path from "path";
-import { registerAllTools } from "./mcp/tools";
+import { initializeMCPClient } from "./mcp/client";
 import { runAgentLoop } from "./agent/loop";
-
-// Initialize tool registry
-registerAllTools();
 
 const app = express();
 app.use(express.json());
@@ -70,8 +67,20 @@ app.get("/", (_req: Request, res: Response) => {
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-  console.log(`[Server] Listening on port ${PORT}`);
-  console.log(`[Server] POST /chat - Send messages to the agent`);
-  console.log(`[Server] GET /health - Health check`);
+async function main() {
+  // Initialize MCP client (spawns MCP server as child process)
+  console.log("[Server] Initializing MCP client...");
+  await initializeMCPClient();
+  console.log("[Server] MCP client connected");
+
+  app.listen(PORT, () => {
+    console.log(`[Server] Listening on port ${PORT}`);
+    console.log(`[Server] POST /chat - Send messages to the agent`);
+    console.log(`[Server] GET /health - Health check`);
+  });
+}
+
+main().catch((error) => {
+  console.error("[Server] Fatal error:", error);
+  process.exit(1);
 });

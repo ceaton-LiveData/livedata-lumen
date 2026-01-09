@@ -6,9 +6,8 @@ import {
   ToolConfiguration,
   StopReason,
 } from "@aws-sdk/client-bedrock-runtime";
-import { registry } from "../mcp/tool-registry";
+import { getMCPClient, MCPTool } from "../mcp/client";
 import { buildSystemPrompt } from "./prompts";
-import { ToolDefinition } from "../mcp/types";
 
 const MODEL_ID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0";
 
@@ -19,21 +18,18 @@ export interface AgentLoopOptions {
   onResponse?: (response: string) => void;
 }
 
-function convertToBedrockToolConfig(): ToolConfiguration {
-  const definitions = registry.getDefinitions();
-
-  // Use type assertion to work with AWS SDK's discriminated union types
-  const tools = definitions.map((def: ToolDefinition) => ({
+function convertToBedrockToolConfig(tools: MCPTool[]): ToolConfiguration {
+  const toolSpecs = tools.map((tool) => ({
     toolSpec: {
-      name: def.name,
-      description: def.description,
+      name: tool.name,
+      description: tool.description,
       inputSchema: {
-        json: JSON.parse(JSON.stringify(def.parameters)),
+        json: JSON.parse(JSON.stringify(tool.inputSchema)),
       },
     },
   }));
 
-  return { tools } as ToolConfiguration;
+  return { tools: toolSpecs } as ToolConfiguration;
 }
 
 function extractTextFromContent(content: ContentBlock[] | undefined): string {
@@ -79,8 +75,12 @@ export async function runAgentLoop(
 ): Promise<{ response: string; history: Message[] }> {
   const { maxIterations = 10, region = "us-east-1", onToolCall, onResponse } = options;
 
-  const client = new BedrockRuntimeClient({ region });
-  const toolConfig = convertToBedrockToolConfig();
+  const bedrockClient = new BedrockRuntimeClient({ region });
+  const mcpClient = getMCPClient();
+
+  // Get tool definitions from MCP server
+  const mcpTools = await mcpClient.listTools();
+  const toolConfig = convertToBedrockToolConfig(mcpTools);
   const systemPrompt = buildSystemPrompt();
 
   // Add the user message to history
@@ -108,7 +108,7 @@ export async function runAgentLoop(
       },
     });
 
-    const response = await client.send(command);
+    const response = await bedrockClient.send(command);
     const stopReason = response.stopReason as StopReason;
     const assistantMessage = response.output?.message;
 
@@ -136,7 +136,7 @@ export async function runAgentLoop(
         throw new Error("Model indicated tool_use but no tool calls found");
       }
 
-      // Execute all tool calls and collect results
+      // Execute all tool calls via MCP client and collect results
       const toolResultContents: ContentBlock[] = [];
 
       for (const toolUse of toolUseBlocks) {
@@ -144,7 +144,23 @@ export async function runAgentLoop(
         let isError = false;
 
         try {
-          result = await registry.execute(toolUse.name, toolUse.input);
+          // Call tool via MCP client
+          const mcpResult = await mcpClient.callTool(toolUse.name, toolUse.input);
+          isError = mcpResult.isError || false;
+
+          // Parse the JSON result from MCP response
+          const textContent = mcpResult.content.find((c) => c.type === "text");
+          if (textContent) {
+            try {
+              result = JSON.parse(textContent.text);
+            } catch {
+              // If not valid JSON, use raw text
+              result = { text: textContent.text };
+            }
+          } else {
+            result = { error: "No content in tool response" };
+            isError = true;
+          }
 
           if (onToolCall) {
             onToolCall(toolUse.name, toolUse.input, result);
@@ -156,7 +172,7 @@ export async function runAgentLoop(
           };
         }
 
-        // Build the tool result content block using type assertion
+        // Build the tool result content block
         // Bedrock requires json to be an object, not an array - wrap arrays in { data: [...] }
         const jsonResult = Array.isArray(result)
           ? { data: result }
@@ -183,10 +199,7 @@ export async function runAgentLoop(
   throw new Error(`Max iterations (${maxIterations}) exceeded`);
 }
 
-export function getToolDefinitions() {
-  return registry.getDefinitions();
-}
-
-export function getBedrockToolConfig(): ToolConfiguration {
-  return convertToBedrockToolConfig();
+export async function getToolDefinitions(): Promise<MCPTool[]> {
+  const mcpClient = getMCPClient();
+  return mcpClient.listTools();
 }
