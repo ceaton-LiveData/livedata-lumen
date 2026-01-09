@@ -1,4 +1,5 @@
 import express, { Request, Response } from "express";
+import path from "path";
 import { registerAllTools } from "./mcp/tools";
 import { runAgentLoop } from "./agent/loop";
 
@@ -7,6 +8,18 @@ registerAllTools();
 
 const app = express();
 app.use(express.json());
+
+// CORS middleware - handles preflight and adds headers
+app.use((_req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type");
+  if (_req.method === "OPTIONS") {
+    res.sendStatus(200);
+    return;
+  }
+  next();
+});
 
 interface ChatRequest {
   message: string;
@@ -46,6 +59,13 @@ app.post("/chat", async (req: Request, res: Response) => {
 
 app.get("/health", (_req: Request, res: Response) => {
   res.json({ status: "ok" });
+});
+
+// Serve the UI
+app.use(express.static(path.join(__dirname, "../ui")));
+
+app.get("/", (_req: Request, res: Response) => {
+  res.sendFile(path.join(__dirname, "../ui/index.html"));
 });
 
 const PORT = process.env.PORT || 3000;
