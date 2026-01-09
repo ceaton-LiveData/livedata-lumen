@@ -30,5 +30,6 @@ export const TOOL_USE_INSTRUCTIONS = `When you need data to answer a question:
 4. Suggest follow-up analyses if relevant`;
 
 export function buildSystemPrompt(): string {
-  return `${SYSTEM_PROMPT}\n\n${TOOL_USE_INSTRUCTIONS}`;
+  const today = new Date().toISOString().split("T")[0];
+  return `${SYSTEM_PROMPT}\n\nToday's date is ${today}.\n\n${TOOL_USE_INSTRUCTIONS}`;
 }
