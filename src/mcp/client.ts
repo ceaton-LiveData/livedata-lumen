@@ -39,12 +39,19 @@ export class MCPClient {
     }
 
     // Spawn the MCP server as a child process
-    const serverPath = path.join(__dirname, "server.ts");
+    // In dev: __dirname is src/mcp, server is server.ts (use ts-node)
+    // In prod: __dirname is dist/mcp, server is server.js (use node)
+    const isProduction = __dirname.includes("dist");
+    const serverFile = isProduction ? "server.js" : "server.ts";
+    const serverPath = path.join(__dirname, serverFile);
 
-    this.transport = new StdioClientTransport({
-      command: "npx",
-      args: ["ts-node", serverPath],
-    });
+    console.log(`[MCP Client] Starting MCP server: ${serverPath} (production: ${isProduction})`);
+
+    this.transport = new StdioClientTransport(
+      isProduction
+        ? { command: "node", args: [serverPath] }
+        : { command: "npx", args: ["ts-node", serverPath] }
+    );
 
     await this.client.connect(this.transport);
     this.connected = true;
