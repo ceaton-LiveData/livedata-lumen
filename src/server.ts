@@ -173,15 +173,19 @@ app.get("/health", (_req: Request, res: Response) => {
   res.json({ status: "ok" });
 });
 
-// Serve the UI
-app.use(express.static(path.join(__dirname, "../ui")));
+// Serve the UI - handle both dev (src/) and prod (dist/) paths
+const uiPath = __dirname.includes("dist")
+  ? path.join(__dirname, "../../ui")
+  : path.join(__dirname, "../ui");
+
+app.use(express.static(uiPath));
 
 app.get("/", (_req: Request, res: Response) => {
-  res.sendFile(path.join(__dirname, "../ui/index.html"));
+  res.sendFile(path.join(uiPath, "index.html"));
 });
 
 app.get("/admin", (_req: Request, res: Response) => {
-  res.sendFile(path.join(__dirname, "../ui/admin.html"));
+  res.sendFile(path.join(uiPath, "admin.html"));
 });
 
 const PORT = process.env.PORT || 3001;
