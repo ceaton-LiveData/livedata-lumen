@@ -178,6 +178,9 @@ const uiPath = __dirname.includes("dist")
   ? path.join(__dirname, "../../ui")
   : path.join(__dirname, "../ui");
 
+console.log(`[Server] __dirname: ${__dirname}`);
+console.log(`[Server] UI path: ${uiPath}`);
+
 app.use(express.static(uiPath));
 
 app.get("/", (_req: Request, res: Response) => {
