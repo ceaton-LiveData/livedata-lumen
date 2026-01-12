@@ -2,6 +2,15 @@ import express, { Request, Response } from "express";
 import path from "path";
 import { initializeMCPClient } from "./mcp/client";
 import { runAgentLoop } from "./agent/loop";
+import {
+  logUsage,
+  getUsageStats,
+  getDailyCosts,
+  getDashboardUsage,
+  getRecentLogs,
+  getRecentErrors,
+  calculateCost,
+} from "./services/usage-tracker";
 
 const app = express();
 app.use(express.json());
@@ -31,6 +40,8 @@ interface ToolCallLog {
 
 app.post("/chat", async (req: Request, res: Response) => {
   const { message, dashboard } = req.body as ChatRequest;
+  const requestId = crypto.randomUUID();
+  const timestamp = new Date().toISOString();
 
   if (!message || typeof message !== "string") {
     res.status(400).json({ error: "Missing or invalid 'message' field" });
@@ -47,19 +58,116 @@ app.post("/chat", async (req: Request, res: Response) => {
       },
     });
 
+    // Calculate cost
+    const estimatedCost = calculateCost(result.usage.inputTokens, result.usage.outputTokens);
+
+    // Log to usage tracker
+    logUsage({
+      requestId,
+      timestamp,
+      dashboard: result.dashboard,
+      messageLength: message.length,
+      toolCallCount: toolCalls.length,
+      inputTokens: result.usage.inputTokens,
+      outputTokens: result.usage.outputTokens,
+      totalTokens: result.usage.totalTokens,
+      iterations: result.iterations,
+      durationMs: result.durationMs,
+      status: "success",
+    });
+
+    // Also log to console for CloudWatch
+    console.log(JSON.stringify({
+      type: "request",
+      requestId,
+      timestamp,
+      dashboard: result.dashboard,
+      messageLength: message.length,
+      toolCallCount: toolCalls.length,
+      usage: result.usage,
+      estimatedCost,
+      iterations: result.iterations,
+      durationMs: result.durationMs,
+    }));
+
     res.json({
       response: result.response,
       toolCalls,
       dashboard: result.dashboard,
       availableTools: result.availableTools,
+      usage: {
+        ...result.usage,
+        estimatedCost,
+      },
+      meta: {
+        requestId,
+        timestamp,
+        iterations: result.iterations,
+        durationMs: result.durationMs,
+      },
     });
   } catch (error) {
-    console.error("[Server] Error in agent loop:", error);
+    // Log error to usage tracker
+    logUsage({
+      requestId,
+      timestamp,
+      dashboard,
+      messageLength: message.length,
+      toolCallCount: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      iterations: 0,
+      durationMs: 0,
+      status: "error",
+      errorMessage: error instanceof Error ? error.message : "Unknown error",
+    });
+
+    console.error(JSON.stringify({
+      type: "error",
+      requestId,
+      timestamp,
+      dashboard,
+      error: error instanceof Error ? error.message : "Unknown error",
+    }));
     res.status(500).json({
       error: error instanceof Error ? error.message : "Internal server error",
+      requestId,
     });
   }
 });
+
+// ==================== Admin API Endpoints ====================
+
+app.get("/admin/stats", (_req: Request, res: Response) => {
+  const stats = getUsageStats();
+  res.json(stats);
+});
+
+app.get("/admin/daily-costs", (req: Request, res: Response) => {
+  const days = parseInt(req.query.days as string) || 30;
+  const costs = getDailyCosts(days);
+  res.json(costs);
+});
+
+app.get("/admin/dashboard-usage", (_req: Request, res: Response) => {
+  const usage = getDashboardUsage();
+  res.json(usage);
+});
+
+app.get("/admin/logs", (req: Request, res: Response) => {
+  const limit = parseInt(req.query.limit as string) || 100;
+  const logs = getRecentLogs(limit);
+  res.json(logs);
+});
+
+app.get("/admin/errors", (req: Request, res: Response) => {
+  const limit = parseInt(req.query.limit as string) || 50;
+  const errors = getRecentErrors(limit);
+  res.json(errors);
+});
+
+// ==================== Health & Static Files ====================
 
 app.get("/health", (_req: Request, res: Response) => {
   res.json({ status: "ok" });
@@ -70,6 +178,10 @@ app.use(express.static(path.join(__dirname, "../ui")));
 
 app.get("/", (_req: Request, res: Response) => {
   res.sendFile(path.join(__dirname, "../ui/index.html"));
+});
+
+app.get("/admin", (_req: Request, res: Response) => {
+  res.sendFile(path.join(__dirname, "../ui/admin.html"));
 });
 
 const PORT = process.env.PORT || 3000;
@@ -84,6 +196,7 @@ async function main() {
     console.log(`[Server] Listening on port ${PORT}`);
     console.log(`[Server] POST /chat - Send messages to the agent`);
     console.log(`[Server] GET /health - Health check`);
+    console.log(`[Server] GET /admin - Admin dashboard`);
   });
 }
 

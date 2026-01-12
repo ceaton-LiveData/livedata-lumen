@@ -361,10 +361,7 @@
   </div>
 
   <script>
-    // Use deployed API, or relative path if served from same origin
-    const API_URL = window.location.hostname === 'localhost'
-      ? '/chat'
-      : 'https://68vetiq5cz.us-east-1.awsapprunner.com/chat';
+    const API_URL = 'https://68vetiq5cz.us-east-1.awsapprunner.com/chat';
     const chatContainer = document.getElementById('chatContainer');
     const messageInput = document.getElementById('messageInput');
     const sendButton = document.getElementById('sendButton');

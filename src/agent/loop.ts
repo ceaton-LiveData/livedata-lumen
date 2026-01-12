@@ -19,11 +19,20 @@ export interface AgentLoopOptions {
   onResponse?: (response: string) => void;
 }
 
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+}
+
 export interface AgentLoopResult {
   response: string;
   history: Message[];
   dashboard?: string;
   availableTools: string[];
+  usage: TokenUsage;
+  iterations: number;
+  durationMs: number;
 }
 
 function convertToBedrockToolConfig(tools: MCPTool[]): ToolConfiguration {
@@ -103,6 +112,10 @@ export async function runAgentLoop(
     },
   ];
 
+  // Track usage across all iterations
+  const startTime = Date.now();
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
   let iteration = 0;
 
   while (iteration < maxIterations) {
@@ -123,6 +136,12 @@ export async function runAgentLoop(
     const stopReason = response.stopReason as StopReason;
     const assistantMessage = response.output?.message;
 
+    // Accumulate token usage
+    if (response.usage) {
+      totalInputTokens += response.usage.inputTokens || 0;
+      totalOutputTokens += response.usage.outputTokens || 0;
+    }
+
     if (!assistantMessage) {
       throw new Error("No response from model");
     }
@@ -141,6 +160,13 @@ export async function runAgentLoop(
         history: messages,
         dashboard: dashboardId,
         availableTools: availableToolNames,
+        usage: {
+          inputTokens: totalInputTokens,
+          outputTokens: totalOutputTokens,
+          totalTokens: totalInputTokens + totalOutputTokens,
+        },
+        iterations: iteration,
+        durationMs: Date.now() - startTime,
       };
     }
 

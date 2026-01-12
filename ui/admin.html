@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lumen Admin Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #f85149, #da3633);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: white;
+      font-size: 18px;
+    }
+
+    header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #f0f6fc;
+    }
+
+    header .subtitle {
+      font-size: 14px;
+      color: #8b949e;
+    }
+
+    .refresh-btn {
+      background: #238636;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .refresh-btn:hover {
+      background: #2ea043;
+    }
+
+    .refresh-btn:disabled {
+      background: #21262d;
+      cursor: not-allowed;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid #30363d;
+      padding-bottom: 0;
+    }
+
+    .tab {
+      background: transparent;
+      color: #8b949e;
+      border: none;
+      padding: 12px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+    }
+
+    .tab:hover {
+      color: #c9d1d9;
+    }
+
+    .tab.active {
+      color: #f0f6fc;
+      border-bottom-color: #f78166;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .stat-card.highlight {
+      border-color: #238636;
+      background: linear-gradient(135deg, #161b22 0%, #0d1f0d 100%);
+    }
+
+    .stat-card.warning {
+      border-color: #d29922;
+      background: linear-gradient(135deg, #161b22 0%, #1f1a0d 100%);
+    }
+
+    .stat-card.error {
+      border-color: #f85149;
+      background: linear-gradient(135deg, #161b22 0%, #1f0d0d 100%);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 600;
+      color: #f0f6fc;
+    }
+
+    .stat-value.small {
+      font-size: 20px;
+    }
+
+    .stat-subtitle {
+      font-size: 12px;
+      color: #8b949e;
+      margin-top: 4px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #f0f6fc;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #30363d;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid #30363d;
+    }
+
+    th {
+      background: #21262d;
+      font-size: 12px;
+      font-weight: 600;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    td {
+      font-size: 14px;
+      color: #c9d1d9;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tr:hover td {
+      background: #1c2128;
+    }
+
+    .status-success {
+      color: #3fb950;
+    }
+
+    .status-error {
+      color: #f85149;
+    }
+
+    .mono {
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      font-size: 13px;
+    }
+
+    .cost {
+      color: #3fb950;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #8b949e;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #8b949e;
+    }
+
+    .empty-state h3 {
+      color: #c9d1d9;
+      margin-bottom: 8px;
+    }
+
+    .back-link {
+      color: #58a6ff;
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
+    .error-message {
+      background: #490202;
+      border: 1px solid #f85149;
+      color: #f85149;
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .truncate {
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <div class="logo">L</div>
+      <div>
+        <h1>Lumen Admin</h1>
+        <div class="subtitle">Usage & Cost Dashboard</div>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <a href="/" class="back-link">Back to Chat</a>
+      <button class="refresh-btn" onclick="loadAllData()" id="refreshBtn">
+        Refresh Data
+      </button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" data-tab="overview">Overview</button>
+      <button class="tab" data-tab="costs">Costs</button>
+      <button class="tab" data-tab="dashboards">Dashboards</button>
+      <button class="tab" data-tab="logs">Logs</button>
+      <button class="tab" data-tab="errors">Errors</button>
+    </div>
+
+    <!-- Overview Tab -->
+    <div id="overview" class="tab-content active">
+      <div class="stats-grid" id="costCards">
+        <div class="stat-card highlight">
+          <div class="stat-label">Cost Today</div>
+          <div class="stat-value" id="costToday">$0.0000</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Cost This Week</div>
+          <div class="stat-value" id="costWeek">$0.0000</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Cost This Month</div>
+          <div class="stat-value" id="costMonth">$0.0000</div>
+        </div>
+        <div class="stat-card warning">
+          <div class="stat-label">Total Cost</div>
+          <div class="stat-value" id="costTotal">$0.0000</div>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total API Calls</div>
+          <div class="stat-value" id="totalCalls">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Successful Calls</div>
+          <div class="stat-value status-success" id="successCalls">0</div>
+        </div>
+        <div class="stat-card error">
+          <div class="stat-label">Failed Calls</div>
+          <div class="stat-value" id="failedCalls">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg Response Time</div>
+          <div class="stat-value small" id="avgResponseTime">0ms</div>
+        </div>
+      </div>
+
+      <h3 class="section-title">Token Usage (All Time)</h3>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Input Tokens</div>
+          <div class="stat-value small" id="inputTokens">0</div>
+          <div class="stat-subtitle">$3.00 per 1M tokens</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Output Tokens</div>
+          <div class="stat-value small" id="outputTokens">0</div>
+          <div class="stat-subtitle">$15.00 per 1M tokens</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Costs Tab -->
+    <div id="costs" class="tab-content">
+      <h3 class="section-title">Daily Cost Breakdown (Last 30 Days)</h3>
+      <table id="dailyCostsTable">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Cost</th>
+            <th>API Calls</th>
+            <th>Input Tokens</th>
+            <th>Output Tokens</th>
+          </tr>
+        </thead>
+        <tbody id="dailyCostsBody">
+          <tr><td colspan="5" class="loading">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Dashboards Tab -->
+    <div id="dashboards" class="tab-content">
+      <h3 class="section-title">Usage by Dashboard</h3>
+      <table id="dashboardsTable">
+        <thead>
+          <tr>
+            <th>Dashboard</th>
+            <th>Total Calls</th>
+            <th>Total Cost</th>
+            <th>Total Tokens</th>
+          </tr>
+        </thead>
+        <tbody id="dashboardsBody">
+          <tr><td colspan="4" class="loading">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Logs Tab -->
+    <div id="logs" class="tab-content">
+      <h3 class="section-title">Recent API Calls (Last 100)</h3>
+      <table id="logsTable">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Dashboard</th>
+            <th>Tokens</th>
+            <th>Cost</th>
+            <th>Duration</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="logsBody">
+          <tr><td colspan="6" class="loading">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Errors Tab -->
+    <div id="errors" class="tab-content">
+      <h3 class="section-title">Recent Errors (Last 50)</h3>
+      <div id="errorsContainer">
+        <div class="loading">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.hostname === 'localhost'
+      ? ''
+      : 'https://68vetiq5cz.us-east-1.awsapprunner.com';
+
+    // Tab switching
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    function formatCost(cost) {
+      return '$' + cost.toFixed(4);
+    }
+
+    function formatNumber(num) {
+      return num.toLocaleString();
+    }
+
+    function formatTimestamp(ts) {
+      return new Date(ts).toLocaleString();
+    }
+
+    async function loadStats() {
+      try {
+        const res = await fetch(`${API_BASE}/admin/stats`);
+        const stats = await res.json();
+
+        document.getElementById('costToday').textContent = formatCost(stats.costToday);
+        document.getElementById('costWeek').textContent = formatCost(stats.costThisWeek);
+        document.getElementById('costMonth').textContent = formatCost(stats.costThisMonth);
+        document.getElementById('costTotal').textContent = formatCost(stats.totalCost);
+        document.getElementById('totalCalls').textContent = formatNumber(stats.totalCalls);
+        document.getElementById('successCalls').textContent = formatNumber(stats.successfulCalls);
+        document.getElementById('failedCalls').textContent = formatNumber(stats.failedCalls);
+        document.getElementById('avgResponseTime').textContent = Math.round(stats.avgResponseTimeMs) + 'ms';
+        document.getElementById('inputTokens').textContent = formatNumber(stats.totalInputTokens);
+        document.getElementById('outputTokens').textContent = formatNumber(stats.totalOutputTokens);
+      } catch (error) {
+        console.error('Failed to load stats:', error);
+      }
+    }
+
+    async function loadDailyCosts() {
+      try {
+        const res = await fetch(`${API_BASE}/admin/daily-costs?days=30`);
+        const costs = await res.json();
+
+        const tbody = document.getElementById('dailyCostsBody');
+        if (costs.length === 0 || costs.every(c => c.calls === 0)) {
+          tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No cost data yet</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = costs
+          .filter(c => c.calls > 0)
+          .map(c => `
+            <tr>
+              <td>${c.date}</td>
+              <td class="cost mono">${formatCost(c.cost)}</td>
+              <td>${formatNumber(c.calls)}</td>
+              <td class="mono">${formatNumber(c.inputTokens)}</td>
+              <td class="mono">${formatNumber(c.outputTokens)}</td>
+            </tr>
+          `).join('') || '<tr><td colspan="5" class="empty-state">No cost data yet</td></tr>';
+      } catch (error) {
+        console.error('Failed to load daily costs:', error);
+      }
+    }
+
+    async function loadDashboardUsage() {
+      try {
+        const res = await fetch(`${API_BASE}/admin/dashboard-usage`);
+        const usage = await res.json();
+
+        const tbody = document.getElementById('dashboardsBody');
+        if (usage.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No dashboard usage yet</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = usage.map(d => `
+          <tr>
+            <td>${d.dashboard}</td>
+            <td>${formatNumber(d.totalCalls)}</td>
+            <td class="cost mono">${formatCost(d.totalCost)}</td>
+            <td class="mono">${formatNumber(d.totalTokens)}</td>
+          </tr>
+        `).join('');
+      } catch (error) {
+        console.error('Failed to load dashboard usage:', error);
+      }
+    }
+
+    async function loadLogs() {
+      try {
+        const res = await fetch(`${API_BASE}/admin/logs?limit=100`);
+        const logs = await res.json();
+
+        const tbody = document.getElementById('logsBody');
+        if (logs.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No logs yet</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = logs.map(log => `
+          <tr>
+            <td class="mono">${formatTimestamp(log.timestamp)}</td>
+            <td>${log.dashboard || 'unknown'}</td>
+            <td class="mono">${formatNumber(log.totalTokens)}</td>
+            <td class="cost mono">${formatCost(log.estimatedCost)}</td>
+            <td>${log.durationMs}ms</td>
+            <td class="${log.status === 'success' ? 'status-success' : 'status-error'}">${log.status}</td>
+          </tr>
+        `).join('');
+      } catch (error) {
+        console.error('Failed to load logs:', error);
+      }
+    }
+
+    async function loadErrors() {
+      try {
+        const res = await fetch(`${API_BASE}/admin/errors?limit=50`);
+        const errors = await res.json();
+
+        const container = document.getElementById('errorsContainer');
+        if (errors.length === 0) {
+          container.innerHTML = '<div class="empty-state"><h3>No Errors</h3><p>All requests have been successful</p></div>';
+          return;
+        }
+
+        container.innerHTML = errors.map(err => `
+          <div class="error-message">
+            <strong>${formatTimestamp(err.timestamp)}</strong> - ${err.dashboard || 'unknown'}<br>
+            ${err.errorMessage || 'Unknown error'}
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Failed to load errors:', error);
+      }
+    }
+
+    async function loadAllData() {
+      const btn = document.getElementById('refreshBtn');
+      btn.disabled = true;
+      btn.textContent = 'Loading...';
+
+      await Promise.all([
+        loadStats(),
+        loadDailyCosts(),
+        loadDashboardUsage(),
+        loadLogs(),
+        loadErrors(),
+      ]);
+
+      btn.disabled = false;
+      btn.textContent = 'Refresh Data';
+    }
+
+    // Initial load
+    loadAllData();
+  </script>
+</body>
+</html>
