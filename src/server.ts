@@ -174,8 +174,10 @@ app.get("/health", (_req: Request, res: Response) => {
 });
 
 // Serve the UI - handle both dev (src/) and prod (dist/) paths
+// In dev: __dirname is src/, ui is at ../ui
+// In prod: __dirname is dist/, ui is copied to dist/ui
 const uiPath = __dirname.includes("dist")
-  ? path.join(__dirname, "../../ui")
+  ? path.join(__dirname, "ui")
   : path.join(__dirname, "../ui");
 
 console.log(`[Server] __dirname: ${__dirname}`);
