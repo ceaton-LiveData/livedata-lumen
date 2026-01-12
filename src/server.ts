@@ -184,7 +184,7 @@ app.get("/admin", (_req: Request, res: Response) => {
   res.sendFile(path.join(__dirname, "../ui/admin.html"));
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 async function main() {
   // Initialize MCP client (spawns MCP server as child process)
