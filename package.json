@@ -7,7 +7,7 @@
     "test": "ts-node src/test.ts",
     "test:tools": "ts-node src/test-tools.ts",
     "test:agent": "ts-node src/test-agent-loop.ts",
-    "build": "tsc && copyfiles -u 0 \"ui/**/*\" dist/",
+    "build": "tsc && copyfiles -u 0 \"ui/**/*\" dist/ && copyfiles -u 1 \"src/config/**/*.json\" dist/",
     "start": "ts-node src/server.ts",
     "start:prod": "node dist/server.js",
     "mcp:server": "ts-node src/mcp/server.ts"

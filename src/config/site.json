@@ -1,0 +1,59 @@
+{
+  "siteId": "livedata-internal",
+  "siteName": "LiveData Internal POC",
+
+  "api": {
+    "baseUrl": null,
+    "authMethod": "none",
+    "credentials": null,
+    "timeout": 30000
+  },
+
+  "llm": {
+    "provider": "bedrock",
+    "region": "us-east-1",
+    "model": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    "maxTokens": 4096,
+    "temperature": 0.7
+  },
+
+  "sanitization": {
+    "stripCaseIds": true,
+    "allowSurgeonNames": true,
+    "allowProcedureTypes": true,
+    "redactPatientInfo": true
+  },
+
+  "features": {
+    "enabledDashboards": ["block-utilization"],
+    "allowCrossDashboard": false,
+    "maxQueriesPerSession": 100,
+    "showCalculationExplanations": true,
+    "showToolCalls": true,
+    "conversationHistory": false,
+    "responseStreaming": false
+  },
+
+  "dataScope": {
+    "facilityIds": null,
+    "serviceLines": null,
+    "dateRangeLimitDays": 365
+  },
+
+  "boundaries": {
+    "canAnswer": [
+      "Block utilization metrics and trends",
+      "Surgeon utilization within allocated blocks",
+      "Service line and block group comparisons",
+      "Prime time vs non-prime time analysis"
+    ],
+    "cannotAnswer": [
+      "Patient-level data or PHI",
+      "Financial or billing information",
+      "Staff scheduling or HR data",
+      "Real-time OR status",
+      "Case duration predictions",
+      "Anything outside enabled dashboards"
+    ]
+  }
+}

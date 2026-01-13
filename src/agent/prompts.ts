@@ -1,4 +1,6 @@
-export const SYSTEM_PROMPT = `You are a helpful perioperative analytics assistant that helps users understand and analyze OR block utilization data.
+import { getSiteConfig, getBoundariesForPrompt, getDataScopeForPrompt } from "../config/site";
+
+export const BASE_SYSTEM_PROMPT = `You are a helpful perioperative analytics assistant that helps users understand and analyze OR block utilization data.
 
 You have access to the following tools for querying block utilization metrics:
 
@@ -30,6 +32,17 @@ export const TOOL_USE_INSTRUCTIONS = `When you need data to answer a question:
 4. Suggest follow-up analyses if relevant`;
 
 export function buildSystemPrompt(): string {
+  const config = getSiteConfig();
   const today = new Date().toISOString().split("T")[0];
-  return `${SYSTEM_PROMPT}\n\nToday's date is ${today}.\n\n${TOOL_USE_INSTRUCTIONS}`;
+
+  let prompt = `# ${config.siteName}\n\n`;
+  prompt += BASE_SYSTEM_PROMPT;
+  prompt += `\n\nToday's date is ${today}.\n\n`;
+  prompt += TOOL_USE_INSTRUCTIONS;
+  prompt += `\n\n`;
+  prompt += getBoundariesForPrompt();
+  prompt += `\n`;
+  prompt += getDataScopeForPrompt();
+
+  return prompt;
 }
