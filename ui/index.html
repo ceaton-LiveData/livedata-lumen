@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lumen - Block Utilization Assistant</title>
+  <!-- Markdown parser -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -315,6 +317,76 @@
       white-space: pre-wrap;
       word-wrap: break-word;
     }
+
+    /* Markdown content styling */
+    .message.assistant .markdown-content h1,
+    .message.assistant .markdown-content h2,
+    .message.assistant .markdown-content h3 {
+      color: #f0f6fc;
+      margin: 16px 0 8px 0;
+    }
+
+    .message.assistant .markdown-content h1:first-child,
+    .message.assistant .markdown-content h2:first-child,
+    .message.assistant .markdown-content h3:first-child {
+      margin-top: 0;
+    }
+
+    .message.assistant .markdown-content p {
+      margin: 8px 0;
+    }
+
+    .message.assistant .markdown-content ul,
+    .message.assistant .markdown-content ol {
+      margin: 8px 0;
+      padding-left: 24px;
+    }
+
+    .message.assistant .markdown-content li {
+      margin: 4px 0;
+    }
+
+    .message.assistant .markdown-content table {
+      border-collapse: collapse;
+      margin: 12px 0;
+      width: 100%;
+      font-size: 13px;
+    }
+
+    .message.assistant .markdown-content th,
+    .message.assistant .markdown-content td {
+      border: 1px solid #30363d;
+      padding: 8px 12px;
+      text-align: left;
+    }
+
+    .message.assistant .markdown-content th {
+      background: #161b22;
+      color: #f0f6fc;
+      font-weight: 600;
+    }
+
+    .message.assistant .markdown-content tr:nth-child(even) {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .message.assistant .markdown-content code {
+      background: #161b22;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+
+    .message.assistant .markdown-content strong {
+      color: #f0f6fc;
+    }
+
+    .message.assistant .markdown-content hr {
+      border: none;
+      border-top: 1px solid #30363d;
+      margin: 16px 0;
+    }
   </style>
 </head>
 <body>
@@ -408,7 +480,15 @@
           </div>
         `;
       } else {
-        messageDiv.textContent = content;
+        // Render markdown for assistant messages
+        if (type === 'assistant' && typeof marked !== 'undefined') {
+          const contentDiv = document.createElement('div');
+          contentDiv.className = 'markdown-content';
+          contentDiv.innerHTML = marked.parse(content);
+          messageDiv.appendChild(contentDiv);
+        } else {
+          messageDiv.textContent = content;
+        }
 
         if (toolCalls && toolCalls.length > 0) {
           const toolCallsDiv = document.createElement('div');
