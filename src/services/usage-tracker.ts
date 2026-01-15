@@ -1,6 +1,8 @@
 // Usage tracking service with in-memory storage
 // Can be swapped for database storage later (Supabase, DynamoDB, etc.)
 
+import { randomUUID } from "crypto";
+
 export interface ApiUsageLog {
   id: string;
   requestId: string;
@@ -69,7 +71,7 @@ export function logUsage(log: Omit<ApiUsageLog, "id" | "estimatedCost">): ApiUsa
   const estimatedCost = calculateCost(log.inputTokens, log.outputTokens);
   const entry: ApiUsageLog = {
     ...log,
-    id: crypto.randomUUID(),
+    id: randomUUID(),
     estimatedCost,
   };
   usageLogs.push(entry);
