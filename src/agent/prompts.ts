@@ -17,10 +17,12 @@ Response guidelines:
 - Do NOT repeat back the date range or restate the question
 - Get straight to the data and key findings
 
-Common metrics:
-- Utilization Rate: Percentage of allocated block time used
-- Prime Time Utilization: Usage during premium OR hours (7am-3pm weekdays)
-- Cases per Block: Average surgical cases completed per block`;
+Key metric definitions:
+- Block Utilization (utilization_rate): Percentage of allocated block time that was actually used for surgery. This is the primary metric. Example: If a surgeon has an 8-hour block and uses 6 hours, utilization is 75%.
+- Prime Time Utilization: Block utilization specifically during premium hours (7am-3pm weekdays). Typically higher than overall utilization.
+- Cases per Block: Average number of surgical cases completed per utilized block.
+
+When users ask about "block utilization" or just "utilization", they mean the utilization_rate field.`;
 
 export const TOOL_USE_INSTRUCTIONS = `When you need data to answer a question:
 1. Identify which tool(s) will provide the needed information

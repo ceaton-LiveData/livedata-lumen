@@ -4,7 +4,7 @@ export const blockUtilSummaryTool: Tool<BlockFilterParams, BlockUtilSummaryResul
   definition: {
     name: "block_util_summary",
     description:
-      "Returns overall block utilization metrics for the filtered date range. Use this to get a high-level view of OR block utilization including total blocks, utilized blocks, utilization rate, and case counts.",
+      "Returns overall block utilization summary for a date range. Block utilization = (actual OR time used) / (allocated block time). This is the PRIMARY metric for measuring how efficiently allocated OR block time is being used.",
     parameters: {
       type: "object",
       properties: {
@@ -30,20 +30,25 @@ export const blockUtilSummaryTool: Tool<BlockFilterParams, BlockUtilSummaryResul
   },
 
   execute: async (params: BlockFilterParams): Promise<BlockUtilSummaryResult> => {
-    // Stubbed realistic perioperative data
     console.log(`[block_util_summary] Executing with params:`, params);
 
-    // Simulate some variation based on filters
-    const baseUtilization = params.blockgroup ? 0.78 : 0.72;
-    const locationModifier = params.location === "Main OR" ? 0.05 : 0;
+    // Mock data - numbers are internally consistent
+    // 248 blocks × 480 min (8hr blocks) = 119,040 total allocated minutes
+    // 85,795 minutes used = 72% utilization
+    // Prime time (7am-3pm) utilization is typically higher
+    const totalBlocks = 248;
+    const utilizedBlocks = 179; // blocks where at least one case was performed
+    const utilizationRate = 0.72; // 72% of allocated time actually used
+    const primeTimeUtilization = 0.78; // higher during prime hours
+    const totalCases = 412;
 
     return {
-      total_blocks: 248,
-      utilized_blocks: 186,
-      utilization_rate: Math.round((baseUtilization + locationModifier) * 100) / 100,
-      prime_time_utilization: 0.81,
-      total_cases: 412,
-      avg_cases_per_block: 2.2,
+      total_blocks: totalBlocks,
+      utilized_blocks: utilizedBlocks,
+      utilization_rate: utilizationRate,
+      prime_time_utilization: primeTimeUtilization,
+      total_cases: totalCases,
+      avg_cases_per_block: Math.round((totalCases / utilizedBlocks) * 10) / 10,
     };
   },
 };

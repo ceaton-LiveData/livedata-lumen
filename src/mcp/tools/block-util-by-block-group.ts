@@ -11,7 +11,7 @@ export const blockUtilByBlockGroupTool: Tool<
   definition: {
     name: "block_util_by_block_group",
     description:
-      "Breaks down utilization by block group (could be service line, surgeon group, or hybrid). Use this to compare utilization across different surgical services or block ownership groups.",
+      "Breaks down block utilization by service line/block group. Use this to compare how different surgical services are using their allocated block time.",
     parameters: {
       type: "object",
       properties: {
@@ -37,63 +37,64 @@ export const blockUtilByBlockGroupTool: Tool<
   ): Promise<BlockUtilByBlockGroupResult[]> => {
     console.log(`[block_util_by_block_group] Executing with params:`, params);
 
-    // Stubbed realistic perioperative data by service line
+    // Mock data - realistic service line utilization
+    // Total: 248 blocks, 412 cases (matches summary tool)
     return [
       {
         blockgroup: "Orthopedics",
         blocks: 52,
-        utilized_blocks: 47,
-        utilization_rate: 0.9,
-        cases: 118,
+        utilized_blocks: 48,
+        utilization_rate: 0.82,
+        cases: 108,
       },
       {
         blockgroup: "General Surgery",
         blocks: 48,
-        utilized_blocks: 38,
-        utilization_rate: 0.79,
-        cases: 95,
+        utilized_blocks: 42,
+        utilization_rate: 0.74,
+        cases: 89,
       },
       {
         blockgroup: "Cardiac Surgery",
         blocks: 36,
-        utilized_blocks: 31,
-        utilization_rate: 0.86,
-        cases: 62,
+        utilized_blocks: 32,
+        utilization_rate: 0.79,
+        cases: 58,
       },
       {
         blockgroup: "Neurosurgery",
         blocks: 32,
-        utilized_blocks: 24,
-        utilization_rate: 0.75,
-        cases: 48,
+        utilized_blocks: 26,
+        utilization_rate: 0.71,
+        cases: 45,
       },
       {
         blockgroup: "Urology",
         blocks: 28,
-        utilized_blocks: 19,
+        utilized_blocks: 22,
         utilization_rate: 0.68,
-        cases: 42,
+        cases: 48,
       },
       {
         blockgroup: "ENT",
         blocks: 24,
-        utilized_blocks: 14,
-        utilization_rate: 0.58,
-        cases: 35,
+        utilized_blocks: 18,
+        utilization_rate: 0.62,
+        cases: 38,
       },
       {
         blockgroup: "Plastics",
         blocks: 16,
-        utilized_blocks: 9,
-        utilization_rate: 0.56,
-        cases: 18,
+        utilized_blocks: 11,
+        utilization_rate: 0.58,
+        cases: 16,
       },
       {
         blockgroup: "Vascular",
         blocks: 12,
-        utilized_blocks: 8,
-        utilization_rate: 0.67,
-        cases: 16,
+        utilized_blocks: 9,
+        utilization_rate: 0.65,
+        cases: 10,
       },
     ];
   },
