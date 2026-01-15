@@ -259,6 +259,106 @@ Lumen provides a conversational interface that:
 
 ---
 
+## Platform Vision
+
+Lumen is not just a chatbot - it's an **intelligent perioperative platform**. The chat interface is one entry point, but the same agent core will power multiple capabilities:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           LUMEN PLATFORM                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐        │
+│  │   Chat UI   │  │  Proactive  │  │  Optimizer  │  │  Embedded   │        │
+│  │  (current)  │  │   Alerts    │  │   Service   │  │  Widget API │        │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘        │
+│         │                │                │                │               │
+│         └────────────────┴────────────────┴────────────────┘               │
+│                                   │                                         │
+│                                   ▼                                         │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                        AGENT CORE                                    │   │
+│  │  - Understands perioperative domain                                  │   │
+│  │  - Same tools, same knowledge, different triggers                    │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                   │                                         │
+│                                   ▼                                         │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                     MCP TOOLS + MANIFESTS                            │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Planned Capabilities
+
+| Capability | Trigger | Output | Use Case |
+|------------|---------|--------|----------|
+| **Chat** | User message | Response in UI | Ad-hoc questions, analysis |
+| **Proactive Alerts** | Scheduled job or event stream | Email/SMS/push notification | "Case running late, recommend moving OR 3 cases" |
+| **Optimizer** | API call from scheduler app | JSON recommendations | "Reallocate blocks to improve utilization" |
+| **Embedded Widget** | API call from other LiveData apps | Contextual insights | Surgeon sees utilization tips on their schedule |
+
+### Event-Driven Example: Case Delay Alert
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  EVENT: Case duration exceeds predicted time by 30+ minutes                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  AGENT TRIGGERED                                                            │
+│  Context: Current case, predicted vs actual end time, downstream cases      │
+│  Task: "Assess impact and recommend actions"                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  AGENT CALLS TOOLS                                                          │
+│  1. get_or_schedule(date, location)                                         │
+│  2. get_available_ors(time_range)                                           │
+│  3. get_case_flexibility(case_ids)                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  AGENT DECISION + NOTIFICATION                                              │
+│                                                                             │
+│  To: Charge Nurse                                                           │
+│  "Dr. Chen's case running 90min over. Recommend:                            │
+│   1. Move C-456 to OR 7 (available) - RECOMMENDED                           │
+│   2. Delay C-456 and C-789 by 90min - impacts 2 patients"                   │
+│                                                                             │
+│  Actions: [Approve Move] [Delay Instead] [Dismiss]                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Architecture Implications
+
+The current POC architecture supports this vision:
+
+1. **Agent Loop** - Already abstracted, can be triggered by any source
+2. **Tools** - Portable, same tools work for all triggers
+3. **Manifests** - Can define event triggers in addition to available tools
+4. **Site Config** - Per-client notification preferences, alert thresholds
+
+Future manifest additions for event-driven triggers:
+```json
+{
+  "id": "schedule-monitor",
+  "triggers": {
+    "case_delay": {
+      "condition": "case.estimated_end > case.predicted_end + 30min",
+      "task": "Assess schedule impact and recommend actions",
+      "notify": ["charge_nurse"],
+      "priority": "high"
+    }
+  }
+}
+```
+
+---
+
 ## Roadmap
 
 ### Phase 1: POC (Current)
@@ -280,10 +380,17 @@ Lumen provides a conversational interface that:
 - [ ] Security hardening (input validation, audit logging)
 - [ ] Persistent usage storage
 
-### Phase 4: Enhanced UX
+### Phase 4: Platform Expansion
+- [ ] Event-driven triggers (proactive alerts)
+- [ ] Optimizer API endpoint
+- [ ] Embedded widget API for other LiveData apps
+- [ ] Notification service (email, SMS, push)
+
+### Phase 5: Enhanced UX
 - [ ] Response streaming
 - [ ] Additional dashboard support
 - [ ] YAML-based tool definitions for non-developers
+- [ ] Domain knowledge in manifests (metric definitions, targets)
 
 See [TODO.md](TODO.md) for detailed implementation plans for each item.
 

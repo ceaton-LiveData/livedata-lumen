@@ -393,6 +393,208 @@
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
+## Trigger Architecture (Future)
+
+The agent core can be triggered by multiple sources. The same tools and knowledge are used regardless of trigger type.
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                           TRIGGER TYPES                                      │
+│                                                                              │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                         TRIGGER SOURCES                                │ │
+│  │                                                                        │ │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌────────────┐ │ │
+│  │  │    USER      │  │    CRON      │  │    EVENT     │  │    API     │ │ │
+│  │  │    CHAT      │  │  (Scheduled) │  │   STREAM     │  │   CALL     │ │ │
+│  │  │              │  │              │  │              │  │            │ │ │
+│  │  │ "What's our  │  │ Daily 6am:   │  │ Case delay   │  │ POST       │ │ │
+│  │  │ utilization?"│  │ "Check for   │  │ detected:    │  │ /optimize  │ │ │
+│  │  │              │  │ alerts"      │  │ "Assess      │  │ { goal }   │ │ │
+│  │  │              │  │              │  │ impact"      │  │            │ │ │
+│  │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └─────┬──────┘ │ │
+│  │         │                 │                 │                │        │ │
+│  └─────────┴─────────────────┴─────────────────┴────────────────┴────────┘ │
+│                                      │                                      │
+│                                      ▼                                      │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                          AGENT CORE                                    │ │
+│  │                       (src/agent/loop.ts)                              │ │
+│  │                                                                        │ │
+│  │  Input:                                                                │ │
+│  │  • Task/Question (from any trigger)                                    │ │
+│  │  • Context (user session, event data, API params)                      │ │
+│  │  • Manifest (which tools/knowledge to use)                             │ │
+│  │                                                                        │ │
+│  │  Output:                                                               │ │
+│  │  • Response text                                                       │ │
+│  │  • Structured data (for API calls)                                     │ │
+│  │  • Actions (for notifications)                                         │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                      │                                      │
+│                                      ▼                                      │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                        OUTPUT HANDLERS                                 │ │
+│  │                                                                        │ │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌────────────┐ │ │
+│  │  │   CHAT UI    │  │    EMAIL     │  │     SMS      │  │    JSON    │ │ │
+│  │  │   Response   │  │   Service    │  │   Service    │  │  Response  │ │ │
+│  │  │              │  │              │  │              │  │            │ │ │
+│  │  │ Displayed    │  │ "Alert:      │  │ "OR 3 delay  │  │ { recs: [] │ │ │
+│  │  │ in browser   │  │ Low util..." │  │ - action     │  │   proj: {} │ │ │
+│  │  │              │  │              │  │ needed"      │  │ }          │ │ │
+│  │  └──────────────┘  └──────────────┘  └──────────────┘  └────────────┘ │ │
+│  │                                                                        │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Event-Driven Flow (Future)
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                        EVENT-DRIVEN ARCHITECTURE                             │
+│                                                                              │
+│   ┌────────────────────────────────────────────────────────────────────┐    │
+│   │                      EVENT SOURCES                                  │    │
+│   │                                                                     │    │
+│   │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐    │    │
+│   │  │  LiveData       │  │  Scheduler      │  │  External       │    │    │
+│   │  │  Real-time Feed │  │  (Cron Jobs)    │  │  Webhooks       │    │    │
+│   │  │                 │  │                 │  │                 │    │    │
+│   │  │ • Case started  │  │ • Daily 6am     │  │ • EHR updates   │    │    │
+│   │  │ • Case delayed  │  │ • Weekly report │  │ • Schedule      │    │    │
+│   │  │ • Block unused  │  │ • Month-end     │  │   changes       │    │    │
+│   │  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘    │    │
+│   │           │                    │                    │              │    │
+│   └───────────┴────────────────────┴────────────────────┴──────────────┘    │
+│                                    │                                         │
+│                                    ▼                                         │
+│   ┌────────────────────────────────────────────────────────────────────┐    │
+│   │                      EVENT PROCESSOR                                │    │
+│   │                                                                     │    │
+│   │  1. Receive event                                                   │    │
+│   │  2. Match against manifest triggers                                 │    │
+│   │  3. Build context for agent                                         │    │
+│   │  4. Invoke agent with task                                          │    │
+│   │                                                                     │    │
+│   │  Example trigger match:                                             │    │
+│   │  ┌───────────────────────────────────────────────────────────────┐ │    │
+│   │  │  Event: { type: "case_delay", delay_minutes: 45, or: "OR-3" } │ │    │
+│   │  │                           ▼                                    │ │    │
+│   │  │  Manifest trigger:                                             │ │    │
+│   │  │  {                                                             │ │    │
+│   │  │    "case_delay": {                                             │ │    │
+│   │  │      "condition": "delay_minutes > 30",  ← MATCHED             │ │    │
+│   │  │      "task": "Assess schedule impact",                         │ │    │
+│   │  │      "notify": ["charge_nurse"]                                │ │    │
+│   │  │    }                                                           │ │    │
+│   │  │  }                                                             │ │    │
+│   │  └───────────────────────────────────────────────────────────────┘ │    │
+│   └────────────────────────────────────────────────────────────────────┘    │
+│                                    │                                         │
+│                                    ▼                                         │
+│   ┌────────────────────────────────────────────────────────────────────┐    │
+│   │                        AGENT EXECUTION                              │    │
+│   │                                                                     │    │
+│   │  Context injected:                                                  │    │
+│   │  • Event data (which case, how late, which OR)                      │    │
+│   │  • Downstream impact (cases scheduled after)                        │    │
+│   │  • Available options (other ORs, flexibility)                       │    │
+│   │                                                                     │    │
+│   │  Agent calls tools:                                                 │    │
+│   │  • get_or_schedule() → see what's affected                          │    │
+│   │  • get_available_ors() → find alternatives                          │    │
+│   │  • get_case_flexibility() → which cases can move                    │    │
+│   │                                                                     │    │
+│   │  Agent produces:                                                    │    │
+│   │  • Analysis of impact                                               │    │
+│   │  • Ranked recommendations                                           │    │
+│   │  • Suggested actions                                                │    │
+│   └────────────────────────────────────────────────────────────────────┘    │
+│                                    │                                         │
+│                                    ▼                                         │
+│   ┌────────────────────────────────────────────────────────────────────┐    │
+│   │                     NOTIFICATION SERVICE                            │    │
+│   │                                                                     │    │
+│   │  Based on manifest config and site preferences:                     │    │
+│   │                                                                     │    │
+│   │  ┌─────────────────────────────────────────────────────────────┐   │    │
+│   │  │  To: Charge Nurse (Sarah)                                   │   │    │
+│   │  │  Channel: Push + Dashboard Alert                            │   │    │
+│   │  │  Priority: High (case delay > 30min)                        │   │    │
+│   │  │                                                             │   │    │
+│   │  │  Message:                                                   │   │    │
+│   │  │  "OR 3: Dr. Chen's case running 45min over.                 │   │    │
+│   │  │                                                             │   │    │
+│   │  │  Impact: 2 afternoon cases will be delayed                  │   │    │
+│   │  │                                                             │   │    │
+│   │  │  Recommendation: Move case C-456 to OR 7 (available 1-4pm)  │   │    │
+│   │  │                                                             │   │    │
+│   │  │  [Approve Move] [Delay Cases] [Dismiss]"                    │   │    │
+│   │  └─────────────────────────────────────────────────────────────┘   │    │
+│   │                                                                     │    │
+│   └────────────────────────────────────────────────────────────────────┘    │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Multi-Site Scaling (Future)
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         MULTI-SITE ARCHITECTURE                              │
+│                                                                              │
+│  Single deployment serves 100+ sites via site-specific configuration:       │
+│                                                                              │
+│   ┌────────────────────────────────────────────────────────────────────┐    │
+│   │                         REQUEST FLOW                                │    │
+│   │                                                                     │    │
+│   │  POST /chat { siteId: "hospital-a", message: "..." }                │    │
+│   │                           │                                         │    │
+│   │                           ▼                                         │    │
+│   │  ┌─────────────────────────────────────────────────────────────┐   │    │
+│   │  │                   CONFIG LOADER                             │   │    │
+│   │  │                                                             │   │    │
+│   │  │  Load from S3: s3://lumen-configs/hospital-a.json           │   │    │
+│   │  │  (cached in memory, refreshed periodically)                 │   │    │
+│   │  └─────────────────────────────────────────────────────────────┘   │    │
+│   │                           │                                         │    │
+│   │                           ▼                                         │    │
+│   │  ┌─────────────────────────────────────────────────────────────┐   │    │
+│   │  │  Site-specific settings applied:                            │   │    │
+│   │  │  • API endpoint for this hospital's Insights API            │   │    │
+│   │  │  • Sanitization rules (what PHI to strip)                   │   │    │
+│   │  │  • Boundaries (what questions to answer)                    │   │    │
+│   │  │  • Notification preferences                                 │   │    │
+│   │  │  • Alert thresholds                                         │   │    │
+│   │  └─────────────────────────────────────────────────────────────┘   │    │
+│   │                                                                     │    │
+│   └────────────────────────────────────────────────────────────────────┘    │
+│                                                                              │
+│   ┌────────────────────────────────────────────────────────────────────┐    │
+│   │                      CONFIG STORAGE                                 │    │
+│   │                                                                     │    │
+│   │  S3 Bucket: lumen-configs/                                          │    │
+│   │  ├── hospital-a.json                                                │    │
+│   │  ├── hospital-b.json                                                │    │
+│   │  ├── clinic-xyz.json                                                │    │
+│   │  └── ... (100+ sites)                                               │    │
+│   │                                                                     │    │
+│   │  Secrets Manager:                                                   │    │
+│   │  ├── lumen/hospital-a/api-key                                       │    │
+│   │  ├── lumen/hospital-b/api-key                                       │    │
+│   │  └── ...                                                            │    │
+│   │                                                                     │    │
+│   │  Adding a new site = upload JSON + add secret                       │    │
+│   │  No deployment required                                             │    │
+│   │                                                                     │    │
+│   └────────────────────────────────────────────────────────────────────┘    │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
 ## File Structure
 
 ```
