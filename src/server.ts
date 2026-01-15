@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
 import path from "path";
+import { randomUUID } from "crypto";
 import { initializeMCPClient } from "./mcp/client";
 import { runAgentLoop } from "./agent/loop";
 import {
@@ -40,7 +41,7 @@ interface ToolCallLog {
 
 app.post("/chat", async (req: Request, res: Response) => {
   const { message, dashboard } = req.body as ChatRequest;
-  const requestId = crypto.randomUUID();
+  const requestId = randomUUID();
   const timestamp = new Date().toISOString();
 
   if (!message || typeof message !== "string") {
