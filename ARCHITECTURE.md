@@ -540,6 +540,255 @@ The agent core can be triggered by multiple sources. The same tools and knowledg
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
+## Perioperative SLM Router (Future V2+)
+
+A fine-tuned Small Language Model (SLM) that handles tool routing, allowing Claude Sonnet to focus solely on reasoning and response generation. This is a strategic IP investment where LiveData builds domain-specific intelligence.
+
+### Current vs Future Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                     CURRENT ARCHITECTURE (POC)                               │
+│                                                                              │
+│  Query → Agent Loop → Sonnet (tool selection + reasoning) → Tools → Response │
+│                                                                              │
+│  Sonnet handles both:                                                        │
+│  • Deciding which tools to call                                              │
+│  • Reasoning over results and generating response                            │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                     FUTURE ARCHITECTURE (V2+)                                │
+│                                                                              │
+│  Query → Perioperative SLM (tool routing) → Tools → Sonnet (reasoning only)  │
+│                                                                              │
+│  Clean separation:                                                           │
+│  • SLM: Fast, deterministic tool selection (trained on our data)             │
+│  • Sonnet: Nuanced reasoning and response generation                         │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Domain SLM Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    PERIOPERATIVE SLM ROUTER                                  │
+│                                                                              │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                         DOMAIN SLM                                     │ │
+│  │                                                                        │ │
+│  │  Input:                          Output:                               │ │
+│  │  • User query                    • Tool name(s)                        │ │
+│  │  • Available tool schemas        • Tool parameters                     │ │
+│  │  • Dashboard context             • Execution order (if multiple)       │ │
+│  │                                                                        │ │
+│  │  Trained on:                     Understands:                          │ │
+│  │  • Historical query logs         • Perioperative domain vocabulary     │ │
+│  │  • Tool invocation records       • Metric relationships                │ │
+│  │  • Success/rephrase signals      • Cross-dashboard entity resolution   │ │
+│  │                                  • Query decomposition patterns        │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                     │                                        │
+│                                     ▼                                        │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  Example:                                                              │ │
+│  │                                                                        │ │
+│  │  Query: "Why is Dr. Martinez's utilization down but turnover fine?"    │ │
+│  │                                                                        │ │
+│  │  SLM Output:                                                           │ │
+│  │  [                                                                     │ │
+│  │    { tool: "block_util_by_surgeon", params: { surgeon: "Martinez" }},  │ │
+│  │    { tool: "turnover_by_surgeon", params: { surgeon: "Martinez" }},    │ │
+│  │    { tool: "case_volume_by_surgeon", params: { surgeon: "Martinez" }}  │ │
+│  │  ]                                                                     │ │
+│  │                                                                        │ │
+│  │  → Tools execute → Results to Sonnet for reasoning/response            │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+### What the SLM Understands (Domain Knowledge)
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                        DOMAIN KNOWLEDGE AREAS                                │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │  METRIC DEFINITIONS & CALCULATIONS                                  │    │
+│  │  • Utilization = actual OR time / allocated block time              │    │
+│  │  • Turnover = time between cases in same room                       │    │
+│  │  • First-case starts = on-time vs delayed morning cases             │    │
+│  │  • Prime time = premium OR hours (7am-3pm weekdays)                 │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │  METRIC RELATIONSHIPS                                               │    │
+│  │  • High utilization + long turnover = different problem than        │    │
+│  │    low utilization + short turnover                                 │    │
+│  │  • Late first-case starts cascade into afternoon delays             │    │
+│  │  • Add-on cases affect utilization but not scheduled metrics        │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │  ENTITY HIERARCHY                                                   │    │
+│  │  • Service Line → Surgeon → Case                                    │    │
+│  │  • Location → OR Room → Block → Case                                │    │
+│  │  • Same surgeon appears across utilization, turnover, case volume   │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │  OPERATIONAL VOCABULARY                                             │    │
+│  │  • Block release, flip time, add-on case, room turnover             │    │
+│  │  • Prime time, non-prime, released time, overtime                   │    │
+│  │  • Service line, block owner, credentialing                         │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                                                                              │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │  TEMPORAL CONTEXT                                                   │    │
+│  │  • Morning "today" queries → day-of operational tools               │    │
+│  │  • Retrospective questions → Insights analytics tools               │    │
+│  │  • "This week" vs "last month" → different date ranges              │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Training Data Pipeline
+
+The current system already logs the data needed for SLM training:
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                      TRAINING DATA PIPELINE                                  │
+│                                                                              │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                    CURRENT LOGGING (Already in place)                  │ │
+│  │                                                                        │ │
+│  │  Every query captures:                                                 │ │
+│  │  • Query text (original user question)                                 │ │
+│  │  • Tools invoked (which tools the system called)                       │ │
+│  │  • Tool parameters (how the tools were called)                         │ │
+│  │  • Dashboard context (which dashboard the user was on)                 │ │
+│  │  • Request timing and token usage                                      │ │
+│  │                                                                        │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                     │                                        │
+│                                     ▼                                        │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                    TRAINING DATA FORMAT                                │ │
+│  │                                                                        │ │
+│  │  {                                                                     │ │
+│  │    "query": "Which surgeons have low utilization this month?",         │ │
+│  │    "dashboard": "block-utilization",                                   │ │
+│  │    "tools_called": [                                                   │ │
+│  │      {                                                                 │ │
+│  │        "name": "block_util_by_surgeon",                                │ │
+│  │        "params": { "start_date": "2026-01-01", "end_date": "..." }     │ │
+│  │      }                                                                 │ │
+│  │    ],                                                                  │ │
+│  │    "success": true  // or rephrase detected = false                    │ │
+│  │  }                                                                     │ │
+│  │                                                                        │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                     │                                        │
+│                                     ▼                                        │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │                    FUTURE: SUCCESS SIGNALS                             │ │
+│  │                                                                        │ │
+│  │  • User rephrase events → indicates poor routing (negative signal)     │ │
+│  │  • Conversation continuation → indicates good routing (positive)       │ │
+│  │  • Explicit feedback (thumbs up/down) if added to UI                   │ │
+│  │                                                                        │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Strategic Value (The IP Play)
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                      COMPETITIVE MOAT                                        │
+│                                                                              │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  WHY THIS IS DEFENSIBLE                                                │ │
+│  │                                                                        │ │
+│  │  1. Training data comes from real queries at 90+ hospitals             │ │
+│  │  2. Every query processed improves the model                           │ │
+│  │  3. Competitors would need years of perioperative query data           │ │
+│  │  4. The model encodes how perioperative leaders actually think         │ │
+│  │  5. New dashboards/tools are additive—SLM learns to route to them      │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  KEY DISTINCTION: ONE DOMAIN MODEL, NOT MANY ROUTERS                   │ │
+│  │                                                                        │ │
+│  │  ✗ NOT: Separate narrow routers per dashboard                          │ │
+│  │  ✓ YES: Single model that understands perioperative operations         │ │
+│  │                                                                        │ │
+│  │  This enables:                                                         │ │
+│  │  • Cross-dashboard queries ("Dr. Smith's utilization AND turnover")    │ │
+│  │  • Entity resolution (same surgeon across different tools)             │ │
+│  │  • Query decomposition (diagnostic questions → multiple tools)         │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  OPERATIONAL BENEFITS                                                  │ │
+│  │                                                                        │ │
+│  │  • Cost reduction: SLM inference << Sonnet for tool selection          │ │
+│  │  • Latency: Smaller model = faster routing decisions                   │ │
+│  │  • Determinism: Fine-tuned model more predictable than general LLM     │ │
+│  │  • Domain accuracy: Trained specifically on perioperative queries      │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Implementation Path
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                      SLM IMPLEMENTATION TIMELINE                             │
+│                                                                              │
+│  Phase 1: POC (Current)                                                      │
+│  ├─ Sonnet handles everything (tool selection + reasoning)                   │
+│  ├─ Logging captures query text, tool calls, parameters                      │
+│  └─ Building the training data foundation                                    │
+│                                                                              │
+│  Phase 2: Post-Pilot Analysis                                                │
+│  ├─ Analyze query patterns from production usage                             │
+│  ├─ Measure tool distribution (which tools called most often)                │
+│  ├─ Identify cross-dashboard query frequency                                 │
+│  └─ Document common query decomposition patterns                             │
+│                                                                              │
+│  Phase 3: V2 Candidate Evaluation                                            │
+│  ├─ If patterns support it: proceed with SLM development                     │
+│  ├─ Select base model for fine-tuning                                        │
+│  ├─ Build training data export pipeline                                      │
+│  └─ Establish evaluation metrics (routing accuracy, latency)                 │
+│                                                                              │
+│  Phase 4: SLM Integration                                                    │
+│  ├─ Fine-tune domain SLM on accumulated data                                 │
+│  ├─ Add SLM routing step to agent loop                                       │
+│  ├─ A/B test SLM routing vs Sonnet routing                                   │
+│  └─ Monitor cost savings and latency improvements                            │
+│                                                                              │
+│  Phase 5: Continuous Improvement                                             │
+│  ├─ Ongoing model updates as query volume grows                              │
+│  ├─ New tools automatically incorporated via schema updates                  │
+│  └─ Feedback loop from rephrase/success signals                              │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Relationship to Other Future Enhancements
+
+- **Triggers/Event-Driven:** SLM routes event-triggered queries the same way it routes user queries
+- **Multi-Site:** SLM is site-agnostic; site config still controls data access and sanitization
+- **Cross-Dashboard Queries:** SLM is the enabler—it understands which tools across dashboards answer a question
+- **Real-Time EHR Integration:** Just more tools for the SLM to route to
+
 ## Multi-Site Scaling (Future)
 
 ```

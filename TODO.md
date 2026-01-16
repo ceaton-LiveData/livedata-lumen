@@ -244,3 +244,99 @@ LLM-based systems are vulnerable to prompt injection attacks where malicious use
 - Consider feature flags to enable/disable enhancements
 - Test locally before deploying to App Runner
 - Security hardening should be prioritized before any production deployment with real data
+
+---
+
+## 7. Perioperative SLM Router (Future V2+)
+**Status:** Future enhancement
+**Priority:** Future (V2+)
+**Files to modify:** `src/agent/loop.ts`, new `src/agent/slm-router.ts`, new training data pipeline
+
+### Context
+As the system matures and accumulates query logs, there's an opportunity to fine-tune a small language model (SLM) specifically for perioperative tool routing. This would reduce costs, improve latency, and create a competitive moat through domain-specific intelligence.
+
+### Strategic Value
+- **Cost reduction**: SLM handles 80%+ of queries (tool selection), Sonnet only for final reasoning
+- **Latency improvement**: SLM routing is faster than full Sonnet inference
+- **IP/Competitive moat**: Domain-specific model trained on real perioperative queries
+- **Offline capability**: SLM could potentially run on-premises for sensitive deployments
+
+### Implementation Phases
+
+#### Phase 1: Query Pattern Analysis Tooling
+- Build analytics dashboard for query patterns
+- Identify common query→tool mappings
+- Measure tool call accuracy and patterns
+- Determine if sufficient data exists for fine-tuning
+
+#### Phase 2: Training Data Export Pipeline
+- Export anonymized query logs: (query_text, selected_tools, parameters)
+- Create training dataset format compatible with fine-tuning services
+- Build data validation and quality checks
+- Ensure no PHI/PII leakage in training data
+
+#### Phase 3: SLM Fine-Tuning Infrastructure Evaluation
+- Evaluate fine-tuning options: AWS Bedrock custom models, OpenAI fine-tuning, open-source models
+- Compare cost/performance trade-offs
+- Set up evaluation benchmarks using held-out test queries
+- Document model versioning and rollback procedures
+
+#### Phase 4: SLM Integration Point in Agent Loop
+- Add router abstraction in `src/agent/loop.ts`
+- SLM receives: query + available tools + site context
+- SLM returns: selected tools + extracted parameters
+- Sonnet receives: query + tool results (reasoning only)
+- Implement fallback to Sonnet-only mode if SLM confidence is low
+
+### Architecture (Future State)
+
+```
+User Query
+    │
+    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    PERIOPERATIVE SLM (fine-tuned)                   │
+│  • Trained on thousands of real perioperative queries               │
+│  • Understands: block utilization, surgeon schedules, OR metrics    │
+│  • Fast tool routing with high confidence                           │
+└─────────────────────────────────────────────────────────────────────┘
+    │
+    │ Selected tools + parameters
+    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                         MCP TOOLS                                   │
+│  Execute queries, return structured data                            │
+└─────────────────────────────────────────────────────────────────────┘
+    │
+    │ Tool results
+    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                    CLAUDE SONNET (reasoning only)                   │
+│  • Interprets results in context                                    │
+│  • Generates human-friendly response                                │
+│  • Handles edge cases SLM can't route                               │
+└─────────────────────────────────────────────────────────────────────┘
+    │
+    ▼
+Response to User
+```
+
+### Training Data Being Captured (Current)
+The current logging in `src/services/usage-tracker.ts` already captures:
+- Query text (user message)
+- Tools called and their parameters
+- Token usage and response patterns
+
+This data will be invaluable for future SLM training. The current architecture is intentionally designed to capture this training data.
+
+### Success Metrics
+- SLM routes 80%+ of queries without Sonnet assistance
+- Tool selection accuracy matches or exceeds Sonnet-only baseline
+- Average query latency reduced by 40%+
+- Cost per query reduced by 50%+
+
+### Dependencies
+- Sufficient query volume (1000+ diverse queries minimum)
+- Clean, validated training data pipeline
+- Fine-tuning infrastructure access
+- Evaluation framework for model comparison

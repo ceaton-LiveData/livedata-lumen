@@ -341,6 +341,26 @@ The current POC architecture supports this vision:
 2. **Tools** - Portable, same tools work for all triggers
 3. **Manifests** - Can define event triggers in addition to available tools
 4. **Site Config** - Per-client notification preferences, alert thresholds
+5. **Training Data Pipeline** - Usage tracking captures query→tool mappings for future SLM training
+
+### Strategic IP: Domain-Specific Intelligence
+
+A key long-term differentiator is the ability to train a **Perioperative SLM** (Small Language Model) on real query patterns. The current architecture intentionally captures training data:
+
+| Data Captured | Purpose |
+|--------------|---------|
+| Query text | What users actually ask about perioperative data |
+| Selected tools | Which tools answer which types of questions |
+| Tool parameters | How to extract dates, surgeon names, metrics from queries |
+| Response patterns | What makes a good vs poor response |
+
+**Why this matters:** After sufficient query volume, we can fine-tune a small model that:
+- Routes 80%+ of queries without needing Sonnet (cost reduction)
+- Understands perioperative vocabulary natively (better accuracy)
+- Runs faster than full Sonnet inference (latency improvement)
+- Could run on-premises for sensitive deployments (compliance)
+
+This creates a competitive moat - the domain-specific intelligence improves with usage and cannot be easily replicated without similar data.
 
 Future manifest additions for event-driven triggers:
 ```json
@@ -391,6 +411,13 @@ Future manifest additions for event-driven triggers:
 - [ ] Additional dashboard support
 - [ ] YAML-based tool definitions for non-developers
 - [ ] Domain knowledge in manifests (metric definitions, targets)
+
+### Phase 6: Domain Intelligence (V2+)
+- [ ] Query pattern analysis and tooling
+- [ ] Training data export pipeline
+- [ ] Perioperative SLM fine-tuning for tool routing
+- [ ] Hybrid SLM/Sonnet architecture (SLM routes, Sonnet reasons)
+- [ ] On-premises SLM deployment option for sensitive sites
 
 See [TODO.md](TODO.md) for detailed implementation plans for each item.
 
